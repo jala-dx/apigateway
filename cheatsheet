@@ -1,0 +1,83 @@
+#### How to copy docker image into cisco docker hub
+```
+Jalaja [2:42 PM] 
+what would be the build parameter?
+
+
+cesare [2:43 PM] 
+atomix/es
+
+From: Jalaja Ganapathy <jganapat@cisco.com>
+Date: Tuesday, December 12, 2017 at 12:02 AM
+To: Jalaja Ganapathy <jganapat@cisco.com>
+Subject: how to copy docker image into cisco docker hub
+
+root@myvm:/vagrant/src/cto-github.cisco.com/atomix-old/POC.3/tmp1# bash -x build_docker_container.sh docker://docker.elastic.co/elasticsearch/elasticsearch:5.6.4 elasticsearch_5.6.4:2017-12-11_1
+++ mktemp -d
++ d=/tmp/tmp.OYVodxgIjs
+++ id -u
++ '[' 0 -ne 0 ']'
++ '[' 2 -lt 2 ']'
++ source=docker://docker.elastic.co/elasticsearch/elasticsearch:5.6.4
++ destname=elasticsearch_5.6.4:2017-12-11_1
++ trap cleanup EXIT
++ cd /tmp/tmp.OYVodxgIjs
++ skopeo --debug copy docker://docker.elastic.co/elasticsearch/elasticsearch:5.6.4 oci:oci:image1
+DEBU[0000] Using registries.d directory /etc/containers/registries.d for sigstore configuration 
+DEBU[0000]  No signature storage configuration found for docker.elastic.co/elasticsearch/elasticsearch:5.6.4 
+DEBU[0000] Looking for TLS certificates and private keys in /etc/docker/certs.d/docker.elastic.co 
+DEBU[0000] GET https://docker.elastic.co/v2/            
+DEBU[0000] Ping https://docker.elastic.co/v2/ err <nil> 
+DEBU[0000] Ping https://docker.elastic.co/v2/ status 401 
+DEBU[0001] Increasing token expiration to: 60 seconds   
+DEBU[0001] GET https://docker.elastic.co/v2/elasticsearch/elasticsearch/manifests/5.6.4 
+DEBU[0001] IsRunningImageAllowed for image docker:docker.elastic.co/elasticsearch/elasticsearch:5.6.4 
+DEBU[0001]  Using default policy section                
+DEBU[0001]  Requirement 0: allowed        
+
+
+root@myvm:/vagrant/src/cto-github.cisco.com/atomix-old/POC.3/tmp1# cat build_docker_container.sh 
+#!/bin/bash
+
+# build a container in our dockerhub from a docker container.
+# if you run this in the lab, you'll need to
+# export https_proxy=http://proxy.esl.cisco.com:8080
+# export http_proxy=http://proxy.esl.cisco.com:8080
+# export no_proxy=.cisco.com
+# sudo -E ./build_docker_container.sh docker://alpine alpine:2017-11-30_1
+
+
+d=$(mktemp -d)
+
+if [ $(id -u) -ne 0 ]; then
+        echo "be root"
+        exit 1
+fi
+
+if [ $# -lt 2 ]; then
+        echo "Usage: $0 source pushname"
+        echo "example: $0 docker://alpine alpine:2017-11-30_1"
+        exit 1
+fi
+
+source=$1
+destname=$2
+
+cleanup() {
+        rm -rf $d
+}
+trap cleanup EXIT
+
+cd $d
+
+skopeo --debug copy ${source} oci:oci:image1
+umoci unpack --image oci:image1 image1
+umoci init --layout oci2
+umoci new --image oci2:empty
+umoci unpack --image oci2:empty image2
+rsync -va image1/rootfs/ image2/rootfs/
+umoci repack --image oci2:image2 image2
+skopeo --debug copy --dest-creds atom-docker-deployer:4w08j34pivprn8cn oci:oci2:image2 docker://dockerhub.cisco.com/atom-docker/${destname}
+
+root@myvm:/vagrant/src/cto-github.cisco.com/atomix-old/POC.3/tmp1#              
+```
