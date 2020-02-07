@@ -1,4 +1,4 @@
-# :hammer: ATOM API Gateway
+# :hammer:  API Gateway
 
 ## Goals/Problem statement
 
